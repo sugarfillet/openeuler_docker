@@ -1,2 +1,4 @@
 # openeuler_docker
-self openuler docker 
+self openeuler docker 
+
+## just exec build.sh
