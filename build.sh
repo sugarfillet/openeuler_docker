@@ -23,10 +23,11 @@ url=`cat ${target_dir}/url`
 wget -N $url 
 
 # mount iso 
-mkdir -p $mount_dir || umount $mount_dir
+mkdir $mount_dir 
 mount ${url##*/} $mount_dir
 
 # create repo 
+mv /etc/yum.repos.d/*.repo /opt
 cat > $repo_path << EOF
 [local]
 name=local
@@ -36,18 +37,22 @@ gpgcheck=0
 EOF
 
 # dnf installroot 
-mkdir -p $install_dir || rm -rf $install_dir/*
-yum install --repo=local --installroot=$install_dir --setopt=install_weak_deps=False -y yum vi 
+mkdir  $install_dir || rm -rf $install_dir/*
+#yum install --repo=local --installroot=$install_dir --setopt=install_weak_deps=False -y yum vi 
+yum install --installroot=$install_dir --setopt=install_weak_deps=False -y yum vi 
 
 # tar create rootfs.gz 
 pushd $install_dir
-tar czf openeuler-1.0-2020-01.tar.gz .
+tar --exclude=openeuler-1.0-2020-01.ta.gz -czf openeuler-1.0-2020-01.tar.gz .
 popd
+
+# recover env
 umount $mount_dir
 rm -rf  $repo_path
+mv /opt/*.repo /etc/yum.repos.d/
 
 # dockerfile 
-mkdir -p for_build || rm -rf for_build/*
+mkdir  for_build || rm -rf for_build/*
 cp -f $install_dir/openeuler-1.0-2020-01.tar.gz for_build
 
 cat > for_build/dockerfile << EOF
