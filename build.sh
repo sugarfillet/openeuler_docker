@@ -54,6 +54,12 @@ yum install --installroot=$install_dir --setopt=install_weak_deps=False -y yum v
 
 # tar create rootfs.tar 
 pushd $install_dir
+rpm -ql glibc-devel perl-Encode-devel perl-devel kernel-devel libxcrypt-devel \
+            systemtap-sdt-devel gcc autoconf m4 autogen automake \
+            cpp color-filesystem emacs-filesystem which crontabs \
+            fontpackages-filesystem abattis-cantarell-fonts \
+            fontconfig hicolor-icon-theme adwaita-icon-theme | xargs -I {} rm -rf {} \
+            &&  rm -rf /usr/share/{man,doc,locale,icons,terminfo,groff,misc}/*
 tar --exclude=${tar_name} -cf ${tar_name} .
 popd
 
@@ -66,6 +72,10 @@ cat > for_build/dockerfile << EOF
 FROM scratch
 ADD ${tar_name} /
 CMD ["/bin/bash"]
+
+viv
+
+
 EOF
 
 # docker build 
