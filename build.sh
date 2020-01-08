@@ -1,5 +1,20 @@
 #!/bin/bash
 
+repo_path='/etc/yum.repos.d/localmount.repo'
+install_dir='/oeoe'
+mount_dir='/tmp/for_mount'
+tar_name='openeuler-1.0-2020-01.tar'
+
+recover_env(){
+umount $mount_dir
+rm -rf $mount_dir
+rm -rf $install_dir
+rm -rf $repo_path
+mv /opt/*.repo /etc/yum.repos.d/
+}
+
+trap "recover_env" 2
+
 #check yum env 
 rpm -qa |grep yum &>/dev/null
 if [[ $? != 0 ]];then
@@ -13,17 +28,13 @@ if [[ $local_arch == 'x86_64' ]];then
 	exit
 fi
 
-repo_path='/etc/yum.repos.d/localmount.repo'
-install_dir='/oeoe'
-mount_dir='/tmp/for_mount'
-target_dir=`basename 1.0-1205-aarch64`
 
 # wget iso 
-url=`cat ${target_dir}/url`
+url='http://openeuler-os-image.obs.cn-north-4.myhuaweicloud.com/openEuler-1.0-1205-aarch64-dvd.iso'
 wget -N $url 
 
 # mount iso 
-mkdir $mount_dir 
+mkdir -p $mount_dir 
 mount ${url##*/} $mount_dir
 
 # create repo 
@@ -37,27 +48,23 @@ gpgcheck=0
 EOF
 
 # dnf installroot 
-mkdir  $install_dir || rm -rf $install_dir/*
+mkdir  -p $install_dir 
 #yum install --repo=local --installroot=$install_dir --setopt=install_weak_deps=False -y yum vi 
 yum install --installroot=$install_dir --setopt=install_weak_deps=False -y yum vi 
 
-# tar create rootfs.gz 
+# tar create rootfs.tar 
 pushd $install_dir
-tar --exclude=openeuler-1.0-2020-01.ta.gz -czf openeuler-1.0-2020-01.tar.gz .
+tar --exclude=${tar_name} -cf ${tar_name} .
 popd
 
-# recover env
-umount $mount_dir
-rm -rf  $repo_path
-mv /opt/*.repo /etc/yum.repos.d/
 
 # dockerfile 
-mkdir  for_build || rm -rf for_build/*
-cp -f $install_dir/openeuler-1.0-2020-01.tar.gz for_build
+mkdir for_build || rm -rf for_build/*
+cp -f $install_dir/${tar_name} for_build
 
 cat > for_build/dockerfile << EOF
 FROM scratch
-ADD openeuler-1.0-2020-01.tar.gz /
+ADD ${tar_name} /
 CMD ["/bin/bash"]
 EOF
 
@@ -65,10 +72,13 @@ EOF
 pushd for_build
 docker build -t sugarfillet/openeuler:aarch64 . 
 popd
-docker image ls 
+docker image ls  |grep sugarfillet
 
 # dockerfile slim
 # docker build  
 
 # TEST docker run 
 docker run -it --rm sugarfillet/openeuler:aarch64 bash -c 'cat /etc/os-release' 
+
+# recover env
+recover_env
