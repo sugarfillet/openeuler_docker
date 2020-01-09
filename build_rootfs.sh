@@ -1,5 +1,11 @@
 #!/bin/bash
 
+arch=`uname -m`
+if [[ $arch != 'aarch64']];then
+	echo "Error: rootfs only build on aarch64" 
+	exit 1
+fi
+
 do_cut=1
 repo_path='/etc/yum.repos.d/localmount.repo'
 install_dir='/oeoe'
@@ -74,32 +80,11 @@ eof
 
 fi
 
-#tar --exclude=${tar_name} -cf ${tar_name} .
+tar --exclude=${tar_name} -cf ${tar_name} .
+xz ${tar_name}
 popd
-echo " $install_dir/${tar_name} "
+echo "Hint: your rootfs lives $install_dir/${tar_name}.xz "
+echo "Hint: please expose it to the web server, then you can do docker build"
+echo "Like: scp openeuler-1.0-2020-01_1.tar.xz root@101.133.144.110:/var/www/html"
 
-
-# dockerfile 
-#mkdir for_build || rm -rf for_build/*
-cp -f $install_dir/${tar_name} .
-
-#cat > for_build/dockerfile << EOF
-#FROM scratch
-#ADD ${tar_name} /
-#CMD ["/bin/bash"]
-#EOF
-
-# docker build 
-#pushd for_build
-#docker build -t sugarfillet/openeuler:aarch64 . 
-#popd
-#docker image ls  |grep sugarfillet
-
-# dockerfile slim
-# docker build  
-
-# TEST docker run 
-#docker run -it --rm sugarfillet/openeuler:aarch64 bash -c 'cat /etc/os-release' 
-
-# recover env
 recover_env
