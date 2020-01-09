@@ -1,14 +1,16 @@
 #!/bin/bash
 
+do_cut=1
 repo_path='/etc/yum.repos.d/localmount.repo'
 install_dir='/oeoe'
 mount_dir='/tmp/for_mount'
-tar_name='openeuler-1.0-2020-01.tar'
+tar_name="openeuler-1.0-2020-01_${do_cut}.tar"
+
 
 recover_env(){
 umount $mount_dir
 rm -rf $mount_dir
-rm -rf $install_dir
+#rm -rf $install_dir
 rm -rf $repo_path
 mv /opt/*.repo /etc/yum.repos.d/
 }
@@ -48,47 +50,56 @@ gpgcheck=0
 EOF
 
 # dnf installroot 
-mkdir  -p $install_dir 
-#yum install --repo=local --installroot=$install_dir --setopt=install_weak_deps=False -y yum vi 
-yum install --installroot=$install_dir --setopt=install_weak_deps=False -y yum vi 
+mkdir   $install_dir  || rm -rf $install_dir/*
+yum install --installroot=$install_dir --setopt=install_weak_deps=False -y dnf vi 
 
 # tar create rootfs.tar 
 pushd $install_dir
-rpm -ql glibc-devel perl-Encode-devel perl-devel kernel-devel libxcrypt-devel \
+if [[ $do_cut == 1 ]];then
+chroot . << eof 
+/usr/bin/rpm -ql glibc-devel perl-Encode-devel perl-devel kernel-devel libxcrypt-devel \
             systemtap-sdt-devel gcc autoconf m4 autogen automake \
             cpp color-filesystem emacs-filesystem which crontabs \
             fontpackages-filesystem abattis-cantarell-fonts \
-            fontconfig hicolor-icon-theme adwaita-icon-theme | xargs -I {} rm -rf {} \
-            &&  rm -rf /usr/share/{man,doc,locale,icons,terminfo,groff,misc}/*
-tar --exclude=${tar_name} -cf ${tar_name} .
+            fontconfig hicolor-icon-theme adwaita-icon-theme | xargs -I {} rm -rf {} 
+rm -rf /usr/share/{man,doc,locale,icons}/* 
+cat > /root/.bashrc << EOF
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+	. /etc/bashrc
+fi
+EOF
+
+eof
+
+fi
+
+#tar --exclude=${tar_name} -cf ${tar_name} .
 popd
+echo " $install_dir/${tar_name} "
 
 
 # dockerfile 
-mkdir for_build || rm -rf for_build/*
-cp -f $install_dir/${tar_name} for_build
+#mkdir for_build || rm -rf for_build/*
+cp -f $install_dir/${tar_name} .
 
-cat > for_build/dockerfile << EOF
-FROM scratch
-ADD ${tar_name} /
-CMD ["/bin/bash"]
-
-viv
-
-
-EOF
+#cat > for_build/dockerfile << EOF
+#FROM scratch
+#ADD ${tar_name} /
+#CMD ["/bin/bash"]
+#EOF
 
 # docker build 
-pushd for_build
-docker build -t sugarfillet/openeuler:aarch64 . 
-popd
-docker image ls  |grep sugarfillet
+#pushd for_build
+#docker build -t sugarfillet/openeuler:aarch64 . 
+#popd
+#docker image ls  |grep sugarfillet
 
 # dockerfile slim
 # docker build  
 
 # TEST docker run 
-docker run -it --rm sugarfillet/openeuler:aarch64 bash -c 'cat /etc/os-release' 
+#docker run -it --rm sugarfillet/openeuler:aarch64 bash -c 'cat /etc/os-release' 
 
 # recover env
 recover_env
