@@ -1,12 +1,12 @@
 #!/bin/bash
 
 arch=`uname -m`
-if [[ $arch != 'aarch64']];then
+if [[ $arch != 'aarch64' ]];then
 	echo "Error: rootfs only build on aarch64" 
 	exit 1
 fi
 
-do_cut=1
+do_cut=0
 repo_path='/etc/yum.repos.d/localmount.repo'
 install_dir='/oeoe'
 mount_dir='/tmp/for_mount'
@@ -68,6 +68,10 @@ chroot . << eof
             cpp color-filesystem emacs-filesystem which crontabs \
             fontpackages-filesystem abattis-cantarell-fonts \
             fontconfig hicolor-icon-theme adwaita-icon-theme | xargs -I {} rm -rf {} 
+eof
+fi
+
+chroot . << eof 
 rm -rf /usr/share/{man,doc,locale,icons}/* 
 cat > /root/.bashrc << EOF
 # Source global definitions
@@ -75,16 +79,10 @@ if [ -f /etc/bashrc ]; then
 	. /etc/bashrc
 fi
 EOF
-
 eof
-
-fi
-
 tar --exclude=${tar_name} -cf ${tar_name} .
 xz ${tar_name}
 popd
 echo "Hint: your rootfs lives $install_dir/${tar_name}.xz "
 echo "Hint: please expose it to the web server, then you can do docker build"
-echo "Like: scp openeuler-1.0-2020-01_1.tar.xz root@101.133.144.110:/var/www/html"
-
 recover_env
