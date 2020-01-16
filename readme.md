@@ -3,9 +3,9 @@ self openeuler docker
 ## content
 - build_rootfs.sh
 	- generate openeuler rootfs
-- aarch64_build_docker.sh
-	- do docker build && test on aarch64
-- x86_64_build_docker.sh
-	- do docker build && test on x86_64
+- base_docker.sh
+	- build aarch64 basic oe docker on any arch
+- app_docker.sh
+	- build aarch64 httpd oe docker on any arch
 - readme.md
 	- it is me
