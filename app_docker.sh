@@ -16,21 +16,11 @@ pushd for_build_httpd &>/dev/null
 
 cat > ./dockerfile << EOF
 FROM sugarfillet/oe:aarch64_aarch64_base
-RUN cat > /etc/yum.repos.d/a.repo <<eof
-[openeuler1]
-name=mainline
-baseurl=http://119.3.219.20:8080/Mainline/standard_aarch64/
-enabled=1
-gpgcheck=0
-
-[openeuler2]
-name=extras
-baseurl=http://119.3.219.20:8080/Extras/standard_aarch64/
-enabled=1
-gpgcheck=0
-eof && yum clean all && yum makecache \
-&& yum install -y httpd && rm -rf /usr/share/man/*
-
+RUN echo '[openeuler1]' > /etc/yum.repos.d/a.repo && \
+echo -e "name=mainline\nbaseurl=http://119.3.219.20:8080/Mainline/standard_aarch64/\nenabled=1\ngpgcheck=0" >> /etc/yum.repos.d/a.repo && \
+echo -e "[openeuler2]\nname=extras\nbaseurl=http://119.3.219.20:8080/Extras/standard_aarch64/\nenabled=1\ngpgcheck=0" >> /etc/yum.repos.d/a.repo \
+&& dnf clean all && dnf makecache \
+&& dnf install -y httpd && rm -rf /usr/share/man/*
 EXPOSE 80
 CMD ["/usr/sbin/httpd","-DFOREGROUND"]
 EOF
@@ -39,4 +29,6 @@ docker build -t $docker_repo:${docker_tag}_${build_tag}_${fun} .
 popd &>/dev/null
 
 # TEST docker run 
-# docker run -it --rm $docker_repo:${docker_tag}_${build_tag}_${fun} bash -c 'cat /etc/os-release' 
+docker run -p 8888:80 -itd $docker_repo:${docker_tag}_${build_tag}_${fun}
+curl localhost:8888 &>/dev/null && echo "app docker yes"
+
